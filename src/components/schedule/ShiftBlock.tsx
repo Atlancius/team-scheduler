@@ -6,6 +6,8 @@ import { X, GripVertical } from "lucide-react";
 
 interface Props {
   shift: ShiftWithEmployee;
+  column: number;
+  totalColumns: number;
   onUpdate: (id: number, data: Partial<ShiftWithEmployee>) => void;
   onDelete: (id: number) => void;
 }
@@ -23,7 +25,7 @@ function timeToHeight(start: string, end: string): number {
   return ((eh * 60 + em - sh * 60 - sm) / 60) * SLOT_HEIGHT;
 }
 
-export default function ShiftBlock({ shift, onUpdate, onDelete }: Props) {
+export default function ShiftBlock({ shift, column, totalColumns, onUpdate, onDelete }: Props) {
   const [editing, setEditing] = useState(false);
   const [startTime, setStartTime] = useState(shift.start_time);
   const [endTime, setEndTime] = useState(shift.end_time);
@@ -34,6 +36,10 @@ export default function ShiftBlock({ shift, onUpdate, onDelete }: Props) {
   const top = timeToOffset(shift.start_time);
   const height = Math.max(timeToHeight(shift.start_time, shift.end_time), 24);
   const duration = shiftDurationHours(shift.start_time, shift.end_time);
+
+  // Column positioning
+  const leftPct = (column / totalColumns) * 100;
+  const widthPct = (1 / totalColumns) * 100;
 
   const handleSave = () => {
     onUpdate(shift.id, { start_time: startTime, end_time: endTime });
@@ -67,7 +73,6 @@ export default function ShiftBlock({ shift, onUpdate, onDelete }: Props) {
         resizeRef.current = null;
         document.removeEventListener("mousemove", onMove);
         document.removeEventListener("mouseup", onUp);
-        // Save with current endTime
         onUpdate(shift.id, { end_time: endTime });
       };
 
@@ -80,9 +85,11 @@ export default function ShiftBlock({ shift, onUpdate, onDelete }: Props) {
   if (editing) {
     return (
       <div
-        className="absolute left-1 right-1 z-30 rounded-lg p-2 shadow-xl"
+        className="absolute z-30 rounded-lg p-2 shadow-xl"
         style={{
           top: `${top}px`,
+          left: `calc(${leftPct}% + 2px)`,
+          width: `calc(${widthPct}% - 4px)`,
           minHeight: `${height}px`,
           backgroundColor: shift.employee_color,
         }}
@@ -123,9 +130,11 @@ export default function ShiftBlock({ shift, onUpdate, onDelete }: Props) {
 
   return (
     <div
-      className="absolute left-1 right-1 z-10 rounded-lg shift-block overflow-hidden select-none"
+      className="absolute z-10 rounded-lg shift-block overflow-hidden select-none"
       style={{
         top: `${top}px`,
+        left: `calc(${leftPct}% + 2px)`,
+        width: `calc(${widthPct}% - 4px)`,
         height: `${resizing ? timeToHeight(shift.start_time, endTime) : height}px`,
         backgroundColor: shift.employee_color,
         minHeight: "24px",

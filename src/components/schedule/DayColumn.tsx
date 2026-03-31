@@ -1,7 +1,8 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { Employee, ShiftWithEmployee, HOURS_START, HOURS_END, shiftDurationHours, formatHours } from "@/types";
+import { Employee, ShiftWithEmployee, HOURS_START, shiftDurationHours, formatHours } from "@/types";
+import { layoutShifts } from "@/lib/overlap";
 import ShiftBlock from "./ShiftBlock";
 
 interface Props {
@@ -35,7 +36,6 @@ export default function DayColumn({
   date,
   hours,
   shifts,
-  employees,
   onUpdateShift,
   onDeleteShift,
 }: Props) {
@@ -43,6 +43,9 @@ export default function DayColumn({
   const dayTotal = shifts.reduce((acc, s) => acc + shiftDurationHours(s.start_time, s.end_time), 0);
   const d = new Date(date);
   const dayNum = d.getDate();
+
+  // Layout overlapping shifts side by side
+  const layouted = layoutShifts(shifts);
 
   return (
     <div className="flex-1 min-w-[120px]">
@@ -68,11 +71,13 @@ export default function DayColumn({
           <TimeSlot key={h} dayIndex={dayIndex} hour={h} />
         ))}
 
-        {/* Shift blocks (absolute positioned) */}
-        {shifts.map((shift) => (
+        {/* Shift blocks (absolute positioned, side by side when overlapping) */}
+        {layouted.map((shift) => (
           <ShiftBlock
             key={shift.id}
             shift={shift}
+            column={shift.column}
+            totalColumns={shift.totalColumns}
             onUpdate={onUpdateShift}
             onDelete={onDeleteShift}
           />

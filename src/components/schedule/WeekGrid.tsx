@@ -1,31 +1,29 @@
 "use client";
 
-import { Employee, ShiftWithEmployee, DAY_NAMES, HOURS_START, HOURS_END, getWeekDates } from "@/types";
+import { Employee, Shift, DAY_NAMES, HOURS_START, HOURS_END, getWeekDates } from "@/types";
 import DayColumn from "./DayColumn";
 
 interface Props {
   weekStart: string;
-  shifts: ShiftWithEmployee[];
+  shifts: Shift[];
   employees: Employee[];
-  onUpdateShift: (id: number, data: Partial<ShiftWithEmployee>) => void;
+  onUpdateShift: (id: number, data: Partial<Shift>) => void;
   onDeleteShift: (id: number) => void;
 }
 
 export default function WeekGrid({ weekStart, shifts, employees, onUpdateShift, onDeleteShift }: Props) {
   const dates = getWeekDates(weekStart);
   const hours: number[] = [];
-  for (let h = HOURS_START; h < HOURS_END; h++) {
-    hours.push(h);
-  }
+  for (let h = HOURS_START; h < HOURS_END; h++) hours.push(h);
 
   return (
-    <div className="flex gap-1 min-h-full">
-      {/* Time labels column */}
-      <div className="w-14 shrink-0 pt-10">
+    <div className="flex gap-1.5 min-h-full">
+      {/* Time labels */}
+      <div className="w-12 shrink-0 pt-[52px]">
         {hours.map((h) => (
           <div key={h} className="h-16 flex items-start justify-end pr-2">
-            <span className="text-xs text-text-muted -mt-2">
-              {h.toString().padStart(2, "0")}:00
+            <span className="text-[11px] text-muted-foreground font-mono -mt-2">
+              {h.toString().padStart(2, "0")}h
             </span>
           </div>
         ))}

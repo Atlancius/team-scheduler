@@ -1,10 +1,9 @@
 export interface Employee {
   id: number;
   name: string;
-  role: string | null;
+  role: string;
   color: string;
   weekly_hours: number;
-  created_at: string;
 }
 
 export interface Shift {
@@ -14,18 +13,10 @@ export interface Shift {
   day_of_week: number; // 0=Monday, 6=Sunday
   start_time: string; // "HH:MM"
   end_time: string; // "HH:MM"
-  created_at: string;
 }
 
-export interface ShiftWithEmployee extends Shift {
-  employee_name: string;
-  employee_color: string;
-  employee_weekly_hours: number;
-}
-
-export type DayName = "Lun" | "Mar" | "Mer" | "Jeu" | "Ven" | "Sam" | "Dim";
-
-export const DAY_NAMES: DayName[] = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
+export const DAY_NAMES = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"] as const;
+export const DAY_FULL = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"] as const;
 
 export const HOURS_START = 6;
 export const HOURS_END = 22;
@@ -65,3 +56,9 @@ export function getWeekDates(mondayStr: string): string[] {
   }
   return dates;
 }
+
+export const EMPLOYEE_COLORS = [
+  "#3B82F6", "#EF4444", "#22C55E", "#F59E0B", "#8B5CF6",
+  "#EC4899", "#06B6D4", "#F97316", "#14B8A6", "#6366F1",
+  "#D946EF", "#0EA5E9", "#84CC16", "#E11D48", "#7C3AED",
+];

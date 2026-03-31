@@ -1,7 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { Employee, ShiftWithEmployee, HOURS_START, shiftDurationHours, formatHours } from "@/types";
+import { Employee, Shift, HOURS_START, shiftDurationHours, formatHours } from "@/types";
 import { layoutShifts } from "@/lib/overlap";
 import ShiftBlock from "./ShiftBlock";
 
@@ -10,9 +10,9 @@ interface Props {
   dayIndex: number;
   date: string;
   hours: number[];
-  shifts: ShiftWithEmployee[];
+  shifts: Shift[];
   employees: Employee[];
-  onUpdateShift: (id: number, data: Partial<ShiftWithEmployee>) => void;
+  onUpdateShift: (id: number, data: Partial<Shift>) => void;
   onDeleteShift: (id: number) => void;
 }
 
@@ -25,7 +25,7 @@ function TimeSlot({ dayIndex, hour }: { dayIndex: number; hour: number }) {
   return (
     <div
       ref={setNodeRef}
-      className={`h-16 border-t border-border/30 drop-zone ${isOver ? "drop-zone-active" : ""}`}
+      className={`h-16 border-t border-border/40 drop-zone ${isOver ? "drop-zone-active" : ""}`}
     />
   );
 }
@@ -36,6 +36,7 @@ export default function DayColumn({
   date,
   hours,
   shifts,
+  employees,
   onUpdateShift,
   onDeleteShift,
 }: Props) {
@@ -43,35 +44,44 @@ export default function DayColumn({
   const dayTotal = shifts.reduce((acc, s) => acc + shiftDurationHours(s.start_time, s.end_time), 0);
   const d = new Date(date);
   const dayNum = d.getDate();
+  const isWeekend = dayIndex >= 5;
 
-  // Layout overlapping shifts side by side
-  const layouted = layoutShifts(shifts);
+  // Enrich shifts with employee data for layout
+  const enriched = shifts.map((s) => {
+    const emp = employees.find((e) => e.id === s.employee_id);
+    return {
+      ...s,
+      employee_name: emp?.name || "?",
+      employee_color: emp?.color || "#666",
+      employee_weekly_hours: emp?.weekly_hours || 0,
+    };
+  });
+
+  const layouted = layoutShifts(enriched);
 
   return (
-    <div className="flex-1 min-w-[120px]">
-      {/* Day header */}
-      <div
-        className={`text-center py-2 rounded-t-xl mb-1 ${
-          isToday ? "bg-accent/20 border border-accent/40" : "glass"
-        }`}
-      >
-        <div className="text-xs text-text-muted">{dayName}</div>
-        <div className={`text-lg font-bold ${isToday ? "text-accent" : "text-text-primary"}`}>
+    <div className={`flex-1 min-w-[120px] ${isWeekend ? "opacity-80" : ""}`}>
+      {/* Header */}
+      <div className={`text-center py-2 rounded-xl mb-1.5 border transition-colors ${
+        isToday
+          ? "bg-primary/10 border-primary/30 shadow-sm shadow-primary/10"
+          : "bg-card border-border"
+      }`}>
+        <div className="text-[11px] text-muted-foreground font-medium">{dayName}</div>
+        <div className={`text-lg font-bold ${isToday ? "text-primary" : "text-foreground"}`}>
           {dayNum}
         </div>
         {dayTotal > 0 && (
-          <div className="text-xs text-text-muted">{formatHours(dayTotal)}</div>
+          <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{formatHours(dayTotal)}</div>
         )}
       </div>
 
-      {/* Time slots container (relative for absolute shift blocks) */}
-      <div className="relative glass rounded-b-xl overflow-hidden">
-        {/* Background time slots (droppable) */}
+      {/* Grid */}
+      <div className="relative rounded-xl border border-border bg-card/50 overflow-hidden">
         {hours.map((h) => (
           <TimeSlot key={h} dayIndex={dayIndex} hour={h} />
         ))}
 
-        {/* Shift blocks (absolute positioned, side by side when overlapping) */}
         {layouted.map((shift) => (
           <ShiftBlock
             key={shift.id}

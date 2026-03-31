@@ -1,8 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { Employee, ShiftWithEmployee, getWeekMonday, addWeeks } from "@/types";
+import {
+  DndContext,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { Employee, Shift, getWeekMonday, addWeeks } from "@/types";
+import * as store from "@/lib/store";
 import EmployeeSidebar from "@/components/employees/EmployeeSidebar";
 import WeekGrid from "@/components/schedule/WeekGrid";
 import WeekNavigation from "@/components/schedule/WeekNavigation";
@@ -11,35 +20,31 @@ import EmployeeDragOverlay from "@/components/employees/EmployeeDragOverlay";
 
 export default function Home() {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [shifts, setShifts] = useState<ShiftWithEmployee[]>([]);
+  const [shifts, setShifts] = useState<Shift[]>([]);
   const [weekStart, setWeekStart] = useState(() => getWeekMonday(new Date()));
   const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
 
-  const fetchEmployees = useCallback(async () => {
-    const res = await fetch("/api/employees");
-    setEmployees(await res.json());
-  }, []);
-
-  const fetchShifts = useCallback(async () => {
-    const res = await fetch(`/api/shifts?week_start=${weekStart}`);
-    setShifts(await res.json());
+  const reload = useCallback(() => {
+    setEmployees(store.getEmployees());
+    setShifts(store.getShifts(weekStart));
   }, [weekStart]);
 
-  useEffect(() => { fetchEmployees(); }, [fetchEmployees]);
-  useEffect(() => { fetchShifts(); }, [fetchShifts]);
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { if (mounted) reload(); }, [mounted, reload]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const empId = event.active.data.current?.employeeId;
-    if (empId) {
+    if (empId !== undefined) {
       setActiveEmployee(employees.find((e) => e.id === empId) || null);
     }
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     setActiveEmployee(null);
     const { active, over } = event;
     if (!over) return;
@@ -56,38 +61,33 @@ export default function Home() {
     const start_time = `${startH.toString().padStart(2, "0")}:${startM}`;
     const end_time = `${Math.min(endHour, 22).toString().padStart(2, "0")}:00`;
 
-    const res = await fetch("/api/shifts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        employee_id: employeeId,
-        week_start: weekStart,
-        day_of_week: dayOfWeek,
-        start_time,
-        end_time,
-      }),
+    store.addShift({
+      employee_id: employeeId,
+      week_start: weekStart,
+      day_of_week: dayOfWeek,
+      start_time,
+      end_time,
     });
-
-    if (res.ok) fetchShifts();
+    reload();
   };
 
-  const updateShift = async (shiftId: number, data: Partial<ShiftWithEmployee>) => {
-    const shift = shifts.find((s) => s.id === shiftId);
-    if (!shift) return;
-
-    const res = await fetch("/api/shifts", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...shift, ...data }),
-    });
-
-    if (res.ok) fetchShifts();
+  const handleUpdateShift = (id: number, data: Partial<Shift>) => {
+    store.updateShift(id, data);
+    reload();
   };
 
-  const deleteShift = async (shiftId: number) => {
-    const res = await fetch(`/api/shifts?id=${shiftId}`, { method: "DELETE" });
-    if (res.ok) fetchShifts();
+  const handleDeleteShift = (id: number) => {
+    store.deleteShift(id);
+    reload();
   };
+
+  if (!mounted) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-muted-foreground text-sm">Chargement...</div>
+      </div>
+    );
+  }
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -95,12 +95,19 @@ export default function Home() {
         <EmployeeSidebar
           employees={employees}
           shifts={shifts}
-          weekStart={weekStart}
-          onUpdate={fetchEmployees}
+          onUpdate={reload}
         />
         <main className="flex-1 flex flex-col overflow-hidden">
-          <header className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <h1 className="text-xl font-bold text-text-primary">📅 Team Scheduler</h1>
+          <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/50">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <span className="text-lg">📅</span>
+              </div>
+              <div>
+                <h1 className="text-base font-semibold text-foreground">Team Scheduler</h1>
+                <p className="text-xs text-muted-foreground">Planning hebdomadaire</p>
+              </div>
+            </div>
             <WeekNavigation
               weekStart={weekStart}
               onPrev={() => setWeekStart(addWeeks(weekStart, -1))}
@@ -114,13 +121,13 @@ export default function Home() {
               weekStart={weekStart}
               shifts={shifts}
               employees={employees}
-              onUpdateShift={updateShift}
-              onDeleteShift={deleteShift}
+              onUpdateShift={handleUpdateShift}
+              onDeleteShift={handleDeleteShift}
             />
           </div>
         </main>
       </div>
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeEmployee ? <EmployeeDragOverlay employee={activeEmployee} /> : null}
       </DragOverlay>
     </DndContext>

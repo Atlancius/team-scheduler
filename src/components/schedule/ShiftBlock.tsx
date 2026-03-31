@@ -1,18 +1,19 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { ShiftWithEmployee, HOURS_START, HOURS_END, shiftDurationHours, formatHours } from "@/types";
+import { Shift, HOURS_START, HOURS_END, shiftDurationHours, formatHours } from "@/types";
+import { ShiftLike } from "@/lib/overlap";
 import { X, GripVertical } from "lucide-react";
 
 interface Props {
-  shift: ShiftWithEmployee;
+  shift: ShiftLike;
   column: number;
   totalColumns: number;
-  onUpdate: (id: number, data: Partial<ShiftWithEmployee>) => void;
+  onUpdate: (id: number, data: Partial<Shift>) => void;
   onDelete: (id: number) => void;
 }
 
-const SLOT_HEIGHT = 64; // h-16 = 4rem = 64px
+const SLOT_HEIGHT = 64;
 
 function timeToOffset(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -29,15 +30,12 @@ export default function ShiftBlock({ shift, column, totalColumns, onUpdate, onDe
   const [editing, setEditing] = useState(false);
   const [startTime, setStartTime] = useState(shift.start_time);
   const [endTime, setEndTime] = useState(shift.end_time);
-  const [showTooltip, setShowTooltip] = useState(false);
   const [resizing, setResizing] = useState(false);
   const resizeRef = useRef<{ startY: number; startEndTime: string } | null>(null);
 
   const top = timeToOffset(shift.start_time);
-  const height = Math.max(timeToHeight(shift.start_time, shift.end_time), 24);
+  const height = Math.max(timeToHeight(shift.start_time, shift.end_time), 28);
   const duration = shiftDurationHours(shift.start_time, shift.end_time);
-
-  // Column positioning
   const leftPct = (column / totalColumns) * 100;
   const widthPct = (1 / totalColumns) * 100;
 
@@ -63,8 +61,7 @@ export default function ShiftBlock({ shift, column, totalColumns, onUpdate, onDe
         const newM = snapped % 60;
         const [sh] = shift.start_time.split(":").map(Number);
         if (newH > sh && newH <= HOURS_END) {
-          const newEnd = `${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`;
-          setEndTime(newEnd);
+          setEndTime(`${newH.toString().padStart(2, "0")}:${newM.toString().padStart(2, "0")}`);
         }
       };
 
@@ -85,7 +82,7 @@ export default function ShiftBlock({ shift, column, totalColumns, onUpdate, onDe
   if (editing) {
     return (
       <div
-        className="absolute z-30 rounded-lg p-2 shadow-xl"
+        className="absolute z-30 rounded-lg p-2 shadow-xl ring-2 ring-white/20"
         style={{
           top: `${top}px`,
           left: `calc(${leftPct}% + 2px)`,
@@ -95,31 +92,26 @@ export default function ShiftBlock({ shift, column, totalColumns, onUpdate, onDe
         }}
       >
         <div className="space-y-1.5">
+          <p className="text-[11px] font-semibold text-white truncate">{shift.employee_name}</p>
           <div className="flex gap-1">
             <input
               type="time"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="flex-1 px-1.5 py-0.5 rounded bg-black/30 text-white text-xs border-none focus:outline-none"
+              className="flex-1 px-1.5 py-1 rounded-md bg-black/30 text-white text-xs border-none focus:outline-none focus:ring-1 focus:ring-white/30"
             />
             <input
               type="time"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="flex-1 px-1.5 py-0.5 rounded bg-black/30 text-white text-xs border-none focus:outline-none"
+              className="flex-1 px-1.5 py-1 rounded-md bg-black/30 text-white text-xs border-none focus:outline-none focus:ring-1 focus:ring-white/30"
             />
           </div>
           <div className="flex gap-1">
-            <button
-              onClick={handleSave}
-              className="flex-1 px-2 py-0.5 rounded bg-white/20 hover:bg-white/30 text-white text-xs"
-            >
+            <button onClick={handleSave} className="flex-1 px-2 py-1 rounded-md bg-white/20 hover:bg-white/30 text-white text-xs font-medium transition-colors">
               OK
             </button>
-            <button
-              onClick={() => { setEditing(false); setStartTime(shift.start_time); setEndTime(shift.end_time); }}
-              className="px-2 py-0.5 rounded bg-black/20 hover:bg-black/30 text-white text-xs"
-            >
+            <button onClick={() => { setEditing(false); setStartTime(shift.start_time); setEndTime(shift.end_time); }} className="px-2 py-1 rounded-md bg-black/20 hover:bg-black/30 text-white/80 text-xs transition-colors">
               ✕
             </button>
           </div>
@@ -130,6 +122,7 @@ export default function ShiftBlock({ shift, column, totalColumns, onUpdate, onDe
 
   return (
     <div
+      title={`${shift.employee_name} — ${shift.start_time} → ${shift.end_time} (${formatHours(duration)})`}
       className="absolute z-10 rounded-lg shift-block overflow-hidden select-none"
       style={{
         top: `${top}px`,
@@ -137,51 +130,39 @@ export default function ShiftBlock({ shift, column, totalColumns, onUpdate, onDe
         width: `calc(${widthPct}% - 4px)`,
         height: `${resizing ? timeToHeight(shift.start_time, endTime) : height}px`,
         backgroundColor: shift.employee_color,
-        minHeight: "24px",
+        minHeight: "28px",
       }}
       onClick={() => setEditing(true)}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
     >
       <div className="p-1.5 h-full flex flex-col justify-between">
-        <div className="flex items-start justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold text-white truncate leading-tight">
+        <div className="flex items-start justify-between gap-0.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold text-white truncate leading-tight">
               {shift.employee_name}
             </p>
-            <p className="text-[10px] text-white/70">
-              {shift.start_time} - {resizing ? endTime : shift.end_time}
+            <p className="text-[10px] text-white/70 font-mono">
+              {shift.start_time}–{resizing ? endTime : shift.end_time}
             </p>
           </div>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(shift.id); }}
-            className="p-0.5 rounded hover:bg-black/20 text-white/60 hover:text-white shrink-0"
+            className="p-0.5 rounded hover:bg-black/20 text-white/50 hover:text-white shrink-0 transition-colors"
           >
-            <X size={12} />
+            <X size={11} />
           </button>
         </div>
-        {height > 40 && (
-          <p className="text-[10px] text-white/60 font-medium">{formatHours(duration)}</p>
+        {height > 50 && (
+          <p className="text-[10px] text-white/50 font-mono font-medium">{formatHours(duration)}</p>
         )}
       </div>
 
       {/* Resize handle */}
       <div
         onMouseDown={handleResizeStart}
-        className="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize flex items-center justify-center hover:bg-black/20"
+        className="absolute bottom-0 left-0 right-0 h-2 cursor-s-resize flex items-center justify-center hover:bg-black/20 transition-colors"
       >
-        <GripVertical size={10} className="text-white/40" />
+        <GripVertical size={9} className="text-white/30" />
       </div>
-
-      {/* Tooltip */}
-      {showTooltip && !editing && (
-        <div className="absolute -top-14 left-1/2 -translate-x-1/2 z-50 bg-bg-primary border border-border rounded-lg px-3 py-2 shadow-xl whitespace-nowrap pointer-events-none">
-          <p className="text-xs font-medium text-text-primary">{shift.employee_name}</p>
-          <p className="text-[10px] text-text-muted">
-            {shift.start_time} → {shift.end_time} ({formatHours(duration)})
-          </p>
-        </div>
-      )}
     </div>
   );
 }

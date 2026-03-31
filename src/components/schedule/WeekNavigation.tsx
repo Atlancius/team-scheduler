@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { getWeekDates } from "@/types";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 
 interface Props {
   weekStart: string;
@@ -19,30 +20,21 @@ export default function WeekNavigation({ weekStart, onPrev, onNext, onToday }: P
     d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
 
   return (
-    <div className="flex items-center gap-3">
-      <button
-        onClick={onToday}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-tertiary hover:bg-border text-text-secondary hover:text-text-primary text-sm transition-colors"
-      >
-        <CalendarDays size={14} />
+    <div className="flex items-center gap-2">
+      <Button variant="outline" size="sm" onClick={onToday} className="text-xs gap-1.5">
+        <CalendarDays size={13} />
         Aujourd&apos;hui
-      </button>
-      <div className="flex items-center gap-1">
-        <button
-          onClick={onPrev}
-          className="p-1.5 rounded-lg hover:bg-bg-tertiary text-text-muted hover:text-text-primary transition-colors"
-        >
-          <ChevronLeft size={18} />
-        </button>
-        <span className="text-sm font-medium text-text-primary min-w-[180px] text-center">
+      </Button>
+      <div className="flex items-center">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onPrev}>
+          <ChevronLeft size={16} />
+        </Button>
+        <span className="text-sm font-medium text-foreground min-w-[180px] text-center">
           {fmt(monday)} — {fmt(sunday)} {sunday.getFullYear()}
         </span>
-        <button
-          onClick={onNext}
-          className="p-1.5 rounded-lg hover:bg-bg-tertiary text-text-muted hover:text-text-primary transition-colors"
-        >
-          <ChevronRight size={18} />
-        </button>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onNext}>
+          <ChevronRight size={16} />
+        </Button>
       </div>
     </div>
   );

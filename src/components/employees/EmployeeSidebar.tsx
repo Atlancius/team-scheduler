@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Employee, Shift, shiftDurationHours } from "@/types";
+import { Employee, Shift, Leave, shiftDurationHours } from "@/types";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -13,10 +13,11 @@ import * as store from "@/lib/store";
 interface Props {
   employees: Employee[];
   shifts: Shift[];
+  leaves: Leave[];
   onUpdate: () => void;
 }
 
-export default function EmployeeSidebar({ employees, shifts, onUpdate }: Props) {
+export default function EmployeeSidebar({ employees, shifts, leaves, onUpdate }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
@@ -24,6 +25,9 @@ export default function EmployeeSidebar({ employees, shifts, onUpdate }: Props) 
     shifts
       .filter((s) => s.employee_id === empId)
       .reduce((acc, s) => acc + shiftDurationHours(s.start_time, s.end_time), 0);
+
+  const getLeaveDays = (empId: number) =>
+    leaves.filter((l) => l.employee_id === empId).reduce((acc, l) => acc + (l.half_day === "full" ? 1 : 0.5), 0);
 
   const handleSave = (data: Omit<Employee, "id">) => {
     if (editingEmployee) {
@@ -77,6 +81,7 @@ export default function EmployeeSidebar({ employees, shifts, onUpdate }: Props) 
               key={emp.id}
               employee={emp}
               scheduledHours={getScheduledHours(emp.id)}
+              leaveDays={getLeaveDays(emp.id)}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />

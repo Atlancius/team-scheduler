@@ -1,22 +1,24 @@
 "use client";
 
-import { Employee, Shift, shiftDurationHours, formatHours, DAY_NAMES } from "@/types";
+import { Employee, Shift, Leave, shiftDurationHours, formatHours, DAY_NAMES } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Users, AlertTriangle } from "lucide-react";
+import { Clock, Users, AlertTriangle, Palmtree } from "lucide-react";
 
 interface Props {
   employees: Employee[];
   shifts: Shift[];
+  leaves: Leave[];
 }
 
-export default function HoursSummary({ employees, shifts }: Props) {
+export default function HoursSummary({ employees, shifts, leaves }: Props) {
   if (employees.length === 0) return null;
 
   const totalScheduled = shifts.reduce(
     (acc, s) => acc + shiftDurationHours(s.start_time, s.end_time), 0
   );
   const totalContracted = employees.reduce((acc, e) => acc + e.weekly_hours, 0);
+  const totalLeaveDays = leaves.reduce((acc, l) => acc + (l.half_day === "full" ? 1 : 0.5), 0);
 
   const dayTotals = DAY_NAMES.map((_, i) =>
     shifts.filter((s) => s.day_of_week === i)
@@ -28,6 +30,8 @@ export default function HoursSummary({ employees, shifts }: Props) {
       .reduce((acc, s) => acc + shiftDurationHours(s.start_time, s.end_time), 0);
     return scheduled > e.weekly_hours + 0.5;
   });
+
+  const onLeave = new Set(leaves.map((l) => l.employee_id)).size;
 
   const pct = totalContracted > 0 ? Math.min((totalScheduled / totalContracted) * 100, 100) : 0;
 
@@ -54,6 +58,16 @@ export default function HoursSummary({ employees, shifts }: Props) {
         <Users size={13} className="text-muted-foreground" />
         <span className="text-xs text-muted-foreground">{employees.length}</span>
       </div>
+
+      {/* Leave count */}
+      {totalLeaveDays > 0 && (
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Palmtree size={13} className="text-amber-400" />
+          <span className="text-xs text-amber-400 font-medium">
+            {totalLeaveDays}j ({onLeave} pers.)
+          </span>
+        </div>
+      )}
 
       {/* Over-hours alert */}
       {employeesOver.length > 0 && (

@@ -1,9 +1,10 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { Employee, Shift, HOURS_START, shiftDurationHours, formatHours } from "@/types";
+import { Employee, Shift, Leave, HOURS_START, shiftDurationHours, formatHours } from "@/types";
 import { layoutShifts } from "@/lib/overlap";
 import ShiftBlock from "./ShiftBlock";
+import LeaveBlock from "./LeaveBlock";
 
 interface Props {
   dayName: string;
@@ -11,9 +12,12 @@ interface Props {
   date: string;
   hours: number[];
   shifts: Shift[];
+  leaves: Leave[];
   employees: Employee[];
   onUpdateShift: (id: number, data: Partial<Shift>) => void;
   onDeleteShift: (id: number) => void;
+  onEditLeave: (leave: Leave) => void;
+  onDeleteLeave: (id: number) => void;
 }
 
 function TimeSlot({ dayIndex, hour }: { dayIndex: number; hour: number }) {
@@ -36,17 +40,20 @@ export default function DayColumn({
   date,
   hours,
   shifts,
+  leaves,
   employees,
   onUpdateShift,
   onDeleteShift,
+  onEditLeave,
+  onDeleteLeave,
 }: Props) {
   const isToday = date === new Date().toISOString().split("T")[0];
   const dayTotal = shifts.reduce((acc, s) => acc + shiftDurationHours(s.start_time, s.end_time), 0);
   const d = new Date(date);
   const dayNum = d.getDate();
   const isWeekend = dayIndex >= 5;
+  const hasLeaves = leaves.length > 0;
 
-  // Enrich shifts with employee data for layout
   const enriched = shifts.map((s) => {
     const emp = employees.find((e) => e.id === s.employee_id);
     return {
@@ -71,10 +78,28 @@ export default function DayColumn({
         <div className={`text-lg font-bold ${isToday ? "text-primary" : "text-foreground"}`}>
           {dayNum}
         </div>
-        {dayTotal > 0 && (
-          <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{formatHours(dayTotal)}</div>
-        )}
+        <div className="flex items-center justify-center gap-1">
+          {dayTotal > 0 && (
+            <span className="text-[10px] text-muted-foreground font-mono">{formatHours(dayTotal)}</span>
+          )}
+          {hasLeaves && <span className="text-[10px]">🏖️</span>}
+        </div>
       </div>
+
+      {/* Leave blocks above the grid */}
+      {hasLeaves && (
+        <div className="mb-1">
+          {leaves.map((leave) => (
+            <LeaveBlock
+              key={leave.id}
+              leave={leave}
+              employee={employees.find((e) => e.id === leave.employee_id)}
+              onEdit={onEditLeave}
+              onDelete={onDeleteLeave}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Grid */}
       <div className="relative rounded-xl border border-border bg-card/50 overflow-hidden">

@@ -57,6 +57,41 @@ export function getWeekDates(mondayStr: string): string[] {
   return dates;
 }
 
+export type LeaveType = "conge" | "maladie" | "rtt" | "formation" | "autre";
+
+export const LEAVE_LABELS: Record<LeaveType, string> = {
+  conge: "Congé payé",
+  maladie: "Maladie",
+  rtt: "RTT",
+  formation: "Formation",
+  autre: "Autre",
+};
+
+export const LEAVE_COLORS: Record<LeaveType, string> = {
+  conge: "#f59e0b",
+  maladie: "#ef4444",
+  rtt: "#8b5cf6",
+  formation: "#06b6d4",
+  autre: "#6b7280",
+};
+
+export const LEAVE_ICONS: Record<LeaveType, string> = {
+  conge: "🏖️",
+  maladie: "🤒",
+  rtt: "🕐",
+  formation: "📚",
+  autre: "📋",
+};
+
+export interface Leave {
+  id: number;
+  employee_id: number;
+  date: string; // "YYYY-MM-DD"
+  type: LeaveType;
+  half_day: "full" | "am" | "pm"; // full day, morning only, afternoon only
+  note: string;
+}
+
 export const EMPLOYEE_COLORS = [
   "#3B82F6", "#EF4444", "#22C55E", "#F59E0B", "#8B5CF6",
   "#EC4899", "#06B6D4", "#F97316", "#14B8A6", "#6366F1",

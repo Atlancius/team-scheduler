@@ -8,11 +8,12 @@ import { Pencil, Trash2 } from "lucide-react";
 interface Props {
   employee: Employee;
   scheduledHours: number;
+  leaveDays: number;
   onEdit: (emp: Employee) => void;
   onDelete: (id: number) => void;
 }
 
-export default function EmployeeCard({ employee, scheduledHours, onEdit, onDelete }: Props) {
+export default function EmployeeCard({ employee, scheduledHours, leaveDays, onEdit, onDelete }: Props) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `employee-${employee.id}`,
     data: { employeeId: employee.id },
@@ -61,6 +62,7 @@ export default function EmployeeCard({ employee, scheduledHours, onEdit, onDelet
       <div className="mt-2.5 flex items-center justify-between">
         <span className="text-[11px] text-muted-foreground font-mono">
           {formatHours(scheduledHours)}/{formatHours(employee.weekly_hours)}
+          {leaveDays > 0 && <span className="ml-1 text-amber-400">🏖️{leaveDays}j</span>}
         </span>
         <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-medium border-0" style={{ color: statusColor, backgroundColor: `${statusColor}15` }}>
           {statusLabel}

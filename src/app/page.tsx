@@ -10,20 +10,26 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Employee, Shift, getWeekMonday, addWeeks } from "@/types";
+import { Employee, Shift, Leave, getWeekMonday, addWeeks } from "@/types";
 import * as store from "@/lib/store";
 import EmployeeSidebar from "@/components/employees/EmployeeSidebar";
 import WeekGrid from "@/components/schedule/WeekGrid";
 import WeekNavigation from "@/components/schedule/WeekNavigation";
 import HoursSummary from "@/components/dashboard/HoursSummary";
 import EmployeeDragOverlay from "@/components/employees/EmployeeDragOverlay";
+import LeaveFormDialog from "@/components/leaves/LeaveFormDialog";
+import { Button } from "@/components/ui/button";
+import { Palmtree } from "lucide-react";
 
 export default function Home() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [leaves, setLeaves] = useState<Leave[]>([]);
   const [weekStart, setWeekStart] = useState(() => getWeekMonday(new Date()));
   const [activeEmployee, setActiveEmployee] = useState<Employee | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [editingLeave, setEditingLeave] = useState<Leave | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -32,6 +38,7 @@ export default function Home() {
   const reload = useCallback(() => {
     setEmployees(store.getEmployees());
     setShifts(store.getShifts(weekStart));
+    setLeaves(store.getLeaves(weekStart));
   }, [weekStart]);
 
   useEffect(() => { setMounted(true); }, []);
@@ -81,6 +88,27 @@ export default function Home() {
     reload();
   };
 
+  const handleSaveLeave = (data: Omit<Leave, "id">) => {
+    if (editingLeave) {
+      store.updateLeave(editingLeave.id, data);
+    } else {
+      store.addLeave(data);
+    }
+    setLeaveDialogOpen(false);
+    setEditingLeave(null);
+    reload();
+  };
+
+  const handleEditLeave = (leave: Leave) => {
+    setEditingLeave(leave);
+    setLeaveDialogOpen(true);
+  };
+
+  const handleDeleteLeave = (id: number) => {
+    store.deleteLeave(id);
+    reload();
+  };
+
   if (!mounted) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -95,6 +123,7 @@ export default function Home() {
         <EmployeeSidebar
           employees={employees}
           shifts={shifts}
+          leaves={leaves}
           onUpdate={reload}
         />
         <main className="flex-1 flex flex-col overflow-hidden">
@@ -108,21 +137,35 @@ export default function Home() {
                 <p className="text-xs text-muted-foreground">Planning hebdomadaire</p>
               </div>
             </div>
-            <WeekNavigation
-              weekStart={weekStart}
-              onPrev={() => setWeekStart(addWeeks(weekStart, -1))}
-              onNext={() => setWeekStart(addWeeks(weekStart, 1))}
-              onToday={() => setWeekStart(getWeekMonday(new Date()))}
-            />
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs gap-1.5"
+                onClick={() => { setEditingLeave(null); setLeaveDialogOpen(true); }}
+              >
+                <Palmtree size={13} />
+                Congé
+              </Button>
+              <WeekNavigation
+                weekStart={weekStart}
+                onPrev={() => setWeekStart(addWeeks(weekStart, -1))}
+                onNext={() => setWeekStart(addWeeks(weekStart, 1))}
+                onToday={() => setWeekStart(getWeekMonday(new Date()))}
+              />
+            </div>
           </header>
-          <HoursSummary employees={employees} shifts={shifts} />
+          <HoursSummary employees={employees} shifts={shifts} leaves={leaves} />
           <div className="flex-1 overflow-auto p-4">
             <WeekGrid
               weekStart={weekStart}
               shifts={shifts}
+              leaves={leaves}
               employees={employees}
               onUpdateShift={handleUpdateShift}
               onDeleteShift={handleDeleteShift}
+              onEditLeave={handleEditLeave}
+              onDeleteLeave={handleDeleteLeave}
             />
           </div>
         </main>
@@ -130,6 +173,14 @@ export default function Home() {
       <DragOverlay dropAnimation={null}>
         {activeEmployee ? <EmployeeDragOverlay employee={activeEmployee} /> : null}
       </DragOverlay>
+      <LeaveFormDialog
+        open={leaveDialogOpen}
+        onOpenChange={(open) => { setLeaveDialogOpen(open); if (!open) setEditingLeave(null); }}
+        employees={employees}
+        weekStart={weekStart}
+        editLeave={editingLeave}
+        onSave={handleSaveLeave}
+      />
     </DndContext>
   );
 }
